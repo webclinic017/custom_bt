@@ -59,8 +59,6 @@ class COTSignalFactory(SignalFactoryBase):
                 cot_signal =  MMClusteringPosSize_Signal(self.data, period=period, threshold=threshold)
             elif name == 'pmpu_oi':
                 cot_signal =  PMPUNetOI_Signal(self.data, period=period, threshold=threshold)
-            elif name == 'pmpu_oi':
-                cot_signal =  PMPUNetOI_Signal(self.data, period=period, threshold=threshold)
             elif name == 'pmpu_t':
                 cot_signal =  PMPUNetT_Signal(self.data, period=period, threshold=threshold)
             elif name == 'pmpu_possize':

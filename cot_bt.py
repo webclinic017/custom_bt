@@ -83,14 +83,14 @@ def btrun():
     cot_data['Date'] = pd.to_datetime(cot_data['Date'], format='%Y-%m-%d')
 
     # Instanciating cerebro
-    cerebro = bt.Cerebro(runonce=True)
+    cerebro = bt.Cerebro()
 
     # Setting fixed (percentage-based) SLIPPAGE (0.5%), CHEAT-ON-CLOSE and INITIAL CASH (1.5M USD)
     cerebro.broker = bt.brokers.BackBroker(slip_perc=0.005, coc=True)
     cerebro.broker.set_cash(1.5e6)
 
     # Adding strategy to cerebro and setting the initial cash
-    cerebro.addstrategy(COT_Breakout, cot_component_name='mm_concentration')
+    cerebro.addstrategy(COT_Breakout, cot_component_name='mm_concentration', symbols=symbols_list)
     
     # Adding Price DataFeed
     comminfo_facory = FuturesCommFactory()
@@ -105,7 +105,7 @@ def btrun():
         cot_btdata = COT_PandasData(dataname=df.drop(labels=['symbol'], axis=1))
         cerebro.adddata(data=cot_btdata, name=f"{symbol}_cot")
     
-    cerebro.run()
+    results = cerebro.run()
 
 if __name__ == "__main__":
     btrun()

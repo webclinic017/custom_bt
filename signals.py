@@ -55,30 +55,45 @@ class MMConcentration_Signal(COTSignalBase):
 
         # Money Managers Long (MML) Concentration
         mml_conc = self.data.mml_concentration
-        self._stoch_mml_conc = 100*(mml_conc - Lowest(mml_conc, period=period)) / (Highest(mml_conc, period=period) + Lowest(mml_conc, period=period))
+        self._stoch_mml_conc = 100*(mml_conc - Lowest(mml_conc, period=period)) / (Highest(mml_conc, period=period) - Lowest(mml_conc, period=period))
 
         # Money Managers Short (MMS) Concentration
         mms_conc = self.data.mms_concentration
-        self._stoch_mms_conc = 100*(mms_conc - Lowest(mms_conc, period=period)) / (Highest(mms_conc, period=period) + Lowest(mms_conc, period=period))
+        self._stoch_mms_conc = 100*(mms_conc - Lowest(mms_conc, period=period)) / (Highest(mms_conc, period=period) - Lowest(mms_conc, period=period))
     
     def next(self):
         threshold = self.p.threshold
-        
-        if self._stoch_mml_conc[0] > threshold and self._stoch_mms_conc[0] < (1- threshold):
-            # if mml -> overbought and mms -> undersold:
-            cot_signal = -2  # extremely overbought (strong sell)
+        ulim = threshold
+        llim = 100 - threshold
 
-        elif self._stoch_mml_conc[0] > threshold and self._stoch_mms_conc[0] < threshold:
-            # if mml -> overbought and mms -> neutral:
-            cot_signal = -1  # overbought (sell)
+        mml_conc = self._stoch_mml_conc[0]
+        mms_conc = self._stoch_mms_conc[0]
         
-        elif self._stoch_mml_conc[0] < (1 - threshold) and self._stoch_mms_conc[0] > threshold:
-            # if mml -> underbought and mms -> oversold:
-            cot_signal = 2   # extremely oversold (strong buy)
+        if mml_conc > ulim:
+            # mml -> overbought
+            
+            if mms_conc < llim:
+                # mms -> undersold
+                cot_signal = -2 # strong sell
+            elif mms_conc < ulim:
+                # mms -> neutral
+                cot_signal = -1 # sell
+            else:
+                # mms -> oversold
+                cot_signal = 0 # neutral
 
-        elif not self._stoch_mml_conc[0] < threshold and self._stoch_mms_conc[0] > threshold:
-            # if mml -> neutral and mms -> oversold:
-            cot_signal = 1   # oversold (buy)
+        elif mms_conc > ulim:
+            # mms -> oversold
+
+            if mml_conc < llim:
+                # mml -> underbought
+                cot_signal = 2 # strong buy
+            elif mml_conc < ulim:
+                # mml -> neutral
+                cot_signal = 1 # buy
+            else:
+                # mml -> overbought
+                cot_signal = 0 # neutral
         
         else:
             cot_signal = 0   # neutral
@@ -106,61 +121,85 @@ class MMClusteringPosSize_Signal(COTSignalBase):
     
     def next(self):
         threshold = self.p.threshold
-        
-        #- LONG SIGNAL
-        if self._stoch_mml_clus[0] > threshold and self._stoch_mml_possize[0] > threshold:
-            # if clustering -> overbought and pos size -> overbought:
-            long_cot_signal = -1        # overbought (sell)
+        ulim = threshold
+        llim = 100 - threshold
 
-        elif self._stoch_mml_clus[0] > threshold and self._stoch_mml_possize[0] < threshold:
-            # if clustering -> overbought and pos size -> not overbought:
-            long_cot_signal = -0.5      # slightly overbought (weak sell)
-        
-        elif self._stoch_mml_clus[0] < (1 - threshold) and self._stoch_mml_possize[0] > (1 - threshold):
-            # if clustering -> underbought and pos size -> not underbought:
-            long_cot_signal = 0.5       # slightly underbought (weak buy)
-        
-        elif self._stoch_mml_clus[0] < (1 - threshold) and self._stoch_mml_possize[0] < (1 - threshold):
-            # if clustering -> underbought and pos size -> underbought:
-            long_cot_signal = 1         # underbought (buy)
-        
+        if self._stoch_mml_clus[0] > ulim:
+            # mml clustering -> overbought
+
+            if self._stoch_mms_clus[0] < llim:
+                # mms clustering -> undersold
+                
+                if self._stoch_mml_possize[0] > ulim and self._stoch_mms_possize[0] < llim:
+                    # mml possize -> overbought AND mms possize -> undersold
+                    cot_signal = -2 # strong sell
+                elif self._stoch_mml_possize[0] > ulim or self._stoch_mms_possize[0] < llim:
+                    # mml possize -> overbought OR mms possize -> undersold
+                    cot_signal = -1.5 # semi-strong sell
+                else:
+                    cot_signal = -1 # sell
+                    
+            elif self._stoch_mms_clus[0] < ulim:
+                # mms clustering -> neutral
+                
+                if self._stoch_mml_possize[0] > ulim:
+                    # mml possize -> overbought
+                    cot_signal = -1 # sell
+                else:
+                    # mml possize NOT overbought
+                    cot_signal = -0.5 # weak sell
+
+            else:
+                # mms clustering -> oversold
+                cot_signal = 0
+            
+        elif self._stoch_mms_clus[0] > ulim:
+            # mms clustering -> oversold
+
+            if self._stoch_mml_clus[0] < llim:
+                # mml clustering -> underbought
+                
+                if self._stoch_mms_possize[0] > ulim and self._stoch_mml_possize[0] < llim:
+                    # mms possize -> oversold AND mml possize -> underbought
+                    cot_signal = 2 # strong buy
+                elif self._stoch_mms_possize[0] > ulim or self._stoch_mml_possize[0] < llim:
+                    # mms possize -> oversold OR mml possize -> underbought
+                    cot_signal = 1.5 # semi-strong buy
+                else:
+                    cot_signal = -1 # buy
+
+            elif self._stoch_mms_clus[0] < ulim:
+                # mml clustering -> neutral
+                
+                if self._stoch_mms_possize[0] > ulim:
+                    # mms possize -> oversold
+                    cot_signal = 1 # buy
+                else:
+                    # mms possize NOT oversol
+                    cot_signal = -0.5 # weak sell
+
+            else:
+                # mml clustering -> overbought
+                cot_signal = 0
+
         else:
-            long_cot_signal = 0         # neutral
-        
+            # mml -> NOT overbought AND mms -> NOT overbought
+            cot_signal = 0
 
-        #- SHORT SIGNAL
-        if self._stoch_mms_clus[0] > threshold and self._stoch_mms_possize[0] > threshold:
-            # if clustering -> oversold and pos size -> oversold:
-            short_cot_signal = 1        # oversold (buy)
-
-        elif self._stoch_mms_clus[0] > threshold and self._stoch_mms_possize[0] < threshold:
-            # if clustering -> oversold and pos size -> not oversold:
-            short_cot_signal = 0.5      # slightly oversold (weak buy)
-        
-        elif self._stoch_mms_clus[0] < (1 - threshold) and self._stoch_mms_possize[0] > (1 - threshold):
-            # if clustering -> undersold and pos size -> not undersold:
-            short_cot_signal = -0.5     # slightly undersold (weak sell)
-        
-        elif self._stoch_mms_clus[0] < (1 - threshold) and self._stoch_mms_possize[0] < (1 - threshold):
-            # if clustering -> undersold and pos size -> undersold:
-            short_cot_signal = -1       # undersold (sell)
-        
-        else:
-            short_cot_signal = 0        # neutral
-        
-
-        self.l.signal[0] = long_cot_signal + short_cot_signal
+        self.l.signal[0] = cot_signal
 
 
 class PMPUNet_SignalBase(COTSignalBase):
     def next(self):
         threshold = self.p.threshold
+        ulim = threshold
+        llim = 100 - threshold
 
-        if self._stoch_pmpu_net[0] > threshold:
+        if self._stoch_pmpu_net[0] > ulim:
             # if pmpu net -> long:
             cot_signal = 1        # long/buy
 
-        elif self._stoch_pmpu_net[0] < (1 - threshold):
+        elif self._stoch_pmpu_net[0] < llim:
             # if pmpu net -> long:
             cot_signal = -1        # short/sell
 

@@ -2,6 +2,8 @@ from backtrader import feeds
 
 class COT_PandasData(feeds.PandasData):
 
+    linesoverride = True
+
     lines = (
         'datetime',
         'mml_concentration', 'mml_clustering', 'mml_possize', 
@@ -28,7 +30,7 @@ class Price_PandasData(feeds.PandasData):
 
     linesoverride = True
 
-    lines = ('datetime', 'close', 'open', 'high', 'low')
+    lines = ('datetime', 'close', 'open', 'high', 'low', 'openinterest', 'volume', )
 
     params = (
         ('datetime', 'Date'),
